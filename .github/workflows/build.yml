@@ -1,0 +1,31 @@
+name: build
+# Пересобирает карты из data.json и корневой index.html из maps.json при каждом пуше в gh-pages.
+on:
+  push:
+    branches: [gh-pages]
+    paths: ['**/data.json', 'maps.json', '_tools/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: build-pages
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all maps
+        run: |
+          set -e
+          for d in */; do
+            d="${d%/}"
+            [ -f "$d/data.json" ] && python3 _tools/build_map.py "$d"
+          done
+          [ -f maps.json ] && python3 _tools/build_map.py index || true
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A
+          git commit -m "build: maps" || exit 0
+          git pull --rebase
+          git push

@@ -1,0 +1,26 @@
+name: import-assets
+# Бинарный канал для Claude: коннектор GitHub умеет пушить только текст.
+# Claude кладёт в <slug>/_assets.txt строки "URL -> относительный/путь.jpg", workflow скачивает и коммитит.
+on:
+  push:
+    branches: [gh-pages]
+    paths: ['**/_assets.txt', '**/chunks/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: build-pages
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download listed assets and rebuild chunked files
+        run: python3 _tools/ci_assets.py
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A
+          git commit -m "assets: import" || exit 0
+          git pull --rebase
+          git push
