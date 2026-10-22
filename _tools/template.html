@@ -16,6 +16,9 @@
   #map{height:100dvh}
   .hero{background:linear-gradient(135deg,var(--uz) 0%,var(--uz2) 100%);color:#fff;border-radius:var(--r);padding:16px 18px}
   .hero h1{font-size:20px;margin:0 0 3px;font-weight:700;letter-spacing:-.01em} .hero .sub{opacity:.85;font-size:12px}
+  .hero .back{display:inline-flex;align-items:center;gap:4px;color:#fff;text-decoration:none;font-size:12px;font-weight:500;opacity:.85;margin-bottom:8px;padding:3px 8px 3px 4px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .hero .back:hover{opacity:1;background:rgba(255,255,255,.24)}
+  #home{display:none;position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:900;align-items:center;gap:4px;background:#fff;color:var(--ink);text-decoration:none;font-weight:600;font-size:14px;padding:9px 14px 9px 10px;border-radius:999px;box-shadow:0 4px 16px rgba(27,27,31,.18)}
   .card{background:var(--card);border-radius:var(--r);padding:12px 14px;box-shadow:0 1px 2px rgba(27,27,31,.04)}
   input[type=text]{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:13.5px;background:#fff;outline:none;font-family:inherit}
   input[type=text]:focus{border-color:var(--uz);box-shadow:0 0 0 3px var(--uz-soft)}
@@ -60,6 +63,7 @@
     #side{position:absolute;left:0;right:0;bottom:0;top:auto;height:auto;max-height:80dvh;border-right:none;border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(27,27,31,.18);padding:0 14px calc(14px + env(safe-area-inset-bottom));font-size:15px;transform:translateY(100%);transition:transform .25s ease;z-index:1100;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     #side.open{transform:none}
     .hero,.foot{display:none}
+    #home{display:inline-flex}
     #sheetHead{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);padding:14px 0 10px;z-index:2}
     #sheetHead:before{content:"";position:absolute;top:6px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:#C9C9D6}
     #sheetHead b{font-size:17px;margin-top:6px}
@@ -86,7 +90,7 @@
 <div id="app">
   <aside id="side">
     <div id="sheetHead"><b>Фильтры</b><button id="closeSheet" aria-label="Закрыть">✕</button></div>
-    <div class="hero"><h1>__TITLE__</h1><div class="sub">__SUBTITLE__</div></div>
+    <div class="hero"><a class="back" href="../">&#8592; Все карты</a><h1>__TITLE__</h1><div class="sub">__SUBTITLE__</div></div>
     <input id="q" type="text" placeholder="Поиск по названию или адресу">
     <div id="filters"></div>
     <div class="card stat"><b id="vis">0</b><small>точек показано из <span id="tot">0</span></small></div>
@@ -96,6 +100,7 @@
     <div class="foot">__FOOT__</div>
   </aside>
   <div id="map"></div>
+  <a id="home" href="../">&#8592; Все карты</a>
   <div id="fab"><input id="qm" type="text" placeholder="Поиск по названию или адресу"><button id="openSheet">Фильтры<small id="visM"></small></button></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
