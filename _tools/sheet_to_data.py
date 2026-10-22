@@ -10,6 +10,11 @@
 Лист должен быть расшарен на email сервисного аккаунта (просмотр). Деньги (стоимость, простой в $) в карту не попадают.
 Координаты берутся из колонки ГЕО (десятичные, DMS, «40.1°N, 65.3°E»); строки без ГЕО ищутся в <slug>/_geocache.json
 по ключу «город|локация»; что не нашлось, пишется в <slug>/_needs_geocoding.csv и <slug>/_unmapped.csv.
+
+Метро: листы «МЕТРО» (количество Slimbox/растяжек/путевых по станциям) и «Метро размеры» дают точки
+«Метро: Slimbox» / «Метро: растяжка» / «Метро: путевые» на каждой станции; координаты и линии станций
+в <slug>/_metro_stations.json (ключи-алиасы для разных написаний), контрагент и даты из строки «Метро» реестра.
+Локальный прогон: --csv реестр.csv --metro-csv metro.csv --sizes-csv sizes.csv
 """
 import csv, hashlib, io, json, os, re, sys, datetime
 
@@ -50,15 +55,110 @@ def read_csv(path):
     return rows_from_values(list(csv.reader(io.StringIO(txt))))
 
 
-def read_sheet(sa_info):
+def read_values(sa_info, rng):
     from google.oauth2 import service_account
     from google.auth.transport.requests import AuthorizedSession
+    from urllib.parse import quote
     creds = service_account.Credentials.from_service_account_info(sa_info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     s = AuthorizedSession(creds)
-    from urllib.parse import quote
-    r = s.get(f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{quote(RANGE, safe='')}", timeout=60)
-    r.raise_for_status()
-    return rows_from_values(r.json().get("values", []))
+    r = s.get(f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{quote(rng, safe='')}", timeout=60)
+    if r.status_code != 200:
+        sys.exit(f"Sheets API {r.status_code}: {r.text[:1500]}\n(сервисный аккаунт: {sa_info.get('client_email')})")
+    return r.json().get("values", [])
+
+
+def read_sheet(sa_info):
+    return rows_from_values(read_values(sa_info, RANGE))
+
+
+def csv_values(path):
+    raw = open(path, "rb").read()
+    for enc in ("utf-8-sig", "utf-8", "cp1251"):
+        try:
+            return list(csv.reader(io.StringIO(raw.decode(enc))))
+        except UnicodeDecodeError:
+            continue
+
+
+# ---------- метро (листы «МЕТРО» и «Метро размеры») ----------
+METRO_RANGE, METRO_SIZES_RANGE = "'МЕТРО'!A1:G200", "'Метро размеры'!A1:D300"
+METRO_TYPES = [("Slimbox", "Метро: Slimbox"), ("Растяжка", "Метро: растяжка"), ("Путевые", "Метро: путевые")]
+
+
+def skey(name):
+    """Ключ станции: без пробелов, точек, дефисов, в нижнем регистре; снимаем типовые приставки."""
+    s = re.sub(r"\(.*?\)", "", str(name or "")).lower()
+    s = re.sub(r"(чиланзарская|узбекистанская|юнусабадская)\s+линия,?", "", s)
+    s = re.sub(r"станция метро|станция|лайтбокс.*|переход.*", "", s)
+    s = re.sub(r"[-–]\s*\d+\s*$", "", s.strip())
+    return re.sub(r"[\s.\-'’ʻ`]", "", s)
+
+
+def metro_points(values, size_values, base, stations, unmapped):
+    """values: лист МЕТРО (колонки: пусто, станция, Slimbox, Растяжка, Путевые, пусто, заметка).
+    size_values: лист «Метро размеры» (Поверхность, Город, Станция, Размер). base: строка «Метро» из реестра (контрагент, даты)."""
+    # размеры по типу и станции
+    sizes = {}
+    cur = ""
+    for row in size_values[1:]:
+        row = list(row) + [""] * (4 - len(row))
+        head = str(row[0]).strip()
+        if head:
+            cur = "Slimbox" if "slim" in head.lower() else "Растяжка" if "растяж" in head.lower() else "Путевые" if "путев" in head.lower() else ""
+        if not cur or not str(row[2]).strip():
+            continue
+        k = skey(row[2]); sz = str(row[3]).strip()
+        if sz:
+            sizes.setdefault((cur, k), [])
+            if sz not in sizes[(cur, k)]:
+                sizes[(cur, k)].append(sz)
+    # количество по станциям (одинаковые названия суммируются)
+    counts = {}
+    order = []
+    for row in values[1:]:
+        row = list(row) + [""] * (7 - len(row))
+        st = str(row[1]).strip()
+        if not st:
+            continue
+        k = skey(st)
+        if k not in counts:
+            counts[k] = {"name": st, "n": [0, 0, 0]}; order.append(k)
+        for i in range(3):
+            try:
+                counts[k]["n"][i] += int(float(str(row[2 + i]).replace(",", ".") or 0))
+            except ValueError:
+                pass
+    pts = []
+    # ближайший по ключу: справочник хранит несколько алиасов на станцию
+    alias = {}
+    for sid, st in stations.items():
+        for a in [st["name"]] + st.get("aliases", []):
+            alias[skey(a)] = sid
+    for k in order:
+        c = counts[k]; sid = alias.get(k)
+        if not sid:
+            unmapped.append({"строка": "МЕТРО", "Город": "Ташкент", "Тип носителя": "Метро", "Размер": "", "Локация": c["name"], "ГЕО": "", "причина": "станция не найдена в справочнике _metro_stations.json"})
+            continue
+        st = stations[sid]
+        if not st.get("lat"):
+            unmapped.append({"строка": "МЕТРО", "Город": "Ташкент", "Тип носителя": "Метро", "Размер": "", "Локация": st["name"], "ГЕО": "", "причина": "нет координат станции в _metro_stations.json"})
+            continue
+        for i, (short, typ) in enumerate(METRO_TYPES):
+            n = c["n"][i]
+            if n <= 0:
+                continue
+            sz = ", ".join(sizes.get((short, k), []) or sizes.get((short, skey(st["name"])), []))
+            props = {f: base.get(f, "") for f in FIELDS}
+            props["Размер"] = sz
+            props["Комментарий"] = f"{short}: {n} шт на станции. " + (base.get("Комментарий", "") or "")
+            pts.append({
+                "id": hashlib.md5(f"metro|{sid}|{short}".encode()).hexdigest()[:8],
+                "name": f"{typ} ×{n}", "address": f"Ташкент, станция метро {st['name']} ({st['line']} линия)",
+                "lat": st["lat"], "lon": st["lon"],
+                "cat": {"Тип носителя": typ, "Город": "Ташкент", "Статус по износу": base.get("Статус по износу", "").strip() or "—", "Контрагент": base.get("Контрагент", "").strip() or "—"},
+                "props": props, "accuracy": "exact", "photo": "",
+            })
+    return pts
 
 
 def dms(d, m, s, hemi):
@@ -96,13 +196,19 @@ def key_of(city, loc):
     return re.sub(r"\s+", " ", f"{city}|{loc}".lower()).strip()
 
 
-def build(slug, rows):
+def build(slug, rows, metro_vals=None, sizes_vals=None):
     os.makedirs(slug, exist_ok=True)
     cache_path = os.path.join(slug, "_geocache.json")
     cache = json.load(open(cache_path, encoding="utf-8")) if os.path.exists(cache_path) else {}
+    st_path = os.path.join(slug, "_metro_stations.json")
+    stations = json.load(open(st_path, encoding="utf-8")) if os.path.exists(st_path) else {}
     pts, need, unmapped, bad_geo = [], [], [], []
+    metro_base = None
     for i, r in enumerate(rows, 2):  # i = номер строки в листе
         city, loc, kind = r.get("Город", "").strip(), r.get("Локация", "").strip(), r.get("Тип носителя", "").strip()
+        if kind.lower() == "метро" and metro_vals:
+            metro_base = r  # строка-сводка по метро: контрагент и даты пойдут на все станции
+            continue
         geo = parse_geo(r.get("ГЕО", ""))
         acc = "exact"
         if geo and not in_uz(*geo):
@@ -125,6 +231,10 @@ def build(slug, rows):
             "cat": {c: (r.get(c, "").strip() or "—") for c in CATS},
             "props": props, "accuracy": acc, "photo": "",
         })
+    n_metro = 0
+    if metro_vals:
+        mp = metro_points(metro_vals, sizes_vals or [], metro_base or {}, stations, unmapped)
+        n_metro = len(mp); pts.extend(mp)
     today = datetime.date.today().isoformat()
     d = {
         "title": "Реестр статики", "subtitle": f"{len(pts)} носителей из {len(rows)} строк реестра, {len({p['cat']['Город'] for p in pts})} городов",
@@ -148,18 +258,23 @@ def build(slug, rows):
         json.dump(reg, open("maps.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     except (OSError, ValueError, KeyError):
         pass
-    print(f"{slug}: {len(pts)} точек из {len(rows)} строк; без координат {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
+    print(f"{slug}: {len(pts)} точек из {len(rows)} строк (метро: {n_metro}); без координат {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
 
 
 def main():
     a = sys.argv[1:]
     slug = a[0] if a and not a[0].startswith("--") else "statika"
+    opt = lambda k: a[a.index(k) + 1] if k in a else None
     if "--csv" in a:
-        rows = read_csv(a[a.index("--csv") + 1])
+        rows = read_csv(opt("--csv"))
+        metro = csv_values(opt("--metro-csv")) if opt("--metro-csv") else None
+        sizes = csv_values(opt("--sizes-csv")) if opt("--sizes-csv") else None
     else:
-        info = json.load(open(a[a.index("--sa") + 1])) if "--sa" in a else json.loads(os.environ["GOOGLE_SA_JSON"])
+        info = json.load(open(opt("--sa"))) if opt("--sa") else json.loads(os.environ["GOOGLE_SA_JSON"])
         rows = read_sheet(info)
-    build(slug, rows)
+        metro = read_values(info, METRO_RANGE)
+        sizes = read_values(info, METRO_SIZES_RANGE)
+    build(slug, rows, metro, sizes)
 
 
 if __name__ == "__main__":
