@@ -1,0 +1,44 @@
+name: update-statika
+# Ежедневно в 12:00 по Ташкенту (UTC+5 = 07:00 UTC) читает Google-таблицу «Реестр Статики»
+# через сервисный аккаунт (секрет GOOGLE_SA_JSON) и пересобирает карту statika/ в ветке gh-pages.
+# Файл лежит в main, потому что расписание GitHub работает только из ветки по умолчанию; сами скрипты и данные в gh-pages.
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-pages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install google-auth requests
+      - name: Read sheet and rebuild
+        env:
+          GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
+        run: |
+          test -n "$GOOGLE_SA_JSON" || { echo "::error::Секрет GOOGLE_SA_JSON не задан"; exit 1; }
+          python3 _tools/sheet_to_data.py statika
+          python3 _tools/build_map.py statika
+          python3 _tools/build_map.py index
+      - name: Commit
+        run: |
+          git config user.name "maps-bot"
+          git config user.email "maps-bot@users.noreply.github.com"
+          git add -A statika maps.json index.html
+          if git diff --cached --quiet; then echo "Без изменений"; exit 0; fi
+          git commit -m "statika: update $(date -u +%F)"
+          git pull --rebase origin gh-pages
+          git push origin gh-pages
