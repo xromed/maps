@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#7000FF">
 <title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous">
 <style>
   :root{--uz:#7000FF;--uz2:#5A00CC;--uz-soft:#F1E9FF;--bg:#F4F4F8;--card:#FFFFFF;--ink:#1B1B1F;--soft:#6E6E80;--line:#E6E6EE;--warn:#B26A00;--ok:#2E7D4F;--r:16px}
   *{box-sizing:border-box} html,body{height:100%;margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
@@ -49,7 +49,8 @@
   .pp dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0;font-size:12px}
   .pp dt{color:var(--soft)} .pp dd{margin:0;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
   .pp .acc{display:inline-block;margin-top:8px;font-size:10.5px;padding:1px 8px;border-radius:999px;background:var(--bg);color:var(--soft)}
-  .pp .acc.exact{color:var(--ok)} .pp .acc.approx{color:var(--warn)}
+  .pp .acc.exact{color:var(--ok)} .pp .acc.approx{color:var(--warn)} .pp .acc.dup{color:#B00020;background:#FDECEE}
+  #stale{display:none;position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:950;background:#FFF4D6;color:#7A4B00;border:1px solid #F3D48A;border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:500;box-shadow:0 4px 14px rgba(27,27,31,.12);max-width:calc(100% - 24px)}
   .pp .lnk{margin-top:8px;font-size:11.5px;color:var(--soft)} .pp .lnk a{color:var(--uz);text-decoration:none}
   .leaflet-bar a{color:var(--ink)} .leaflet-control-zoom{border:none!important;box-shadow:0 2px 8px rgba(27,27,31,.12)!important;border-radius:12px!important;overflow:hidden}
   .leaflet-control-layers{border:none!important;border-radius:12px!important;box-shadow:0 2px 8px rgba(27,27,31,.12)!important;font-family:inherit;font-size:12px}
@@ -64,6 +65,7 @@
     #side.open{transform:none}
     .hero,.foot{display:none}
     #home{display:inline-flex}
+    #stale{top:calc(60px + env(safe-area-inset-top));font-size:12px}
     #sheetHead{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);padding:14px 0 10px;z-index:2}
     #sheetHead:before{content:"";position:absolute;top:6px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:#C9C9D6}
     #sheetHead b{font-size:17px;margin-top:6px}
@@ -101,10 +103,11 @@
   </aside>
   <div id="map"></div>
   <a id="home" href="../">&#8592; Все карты</a>
+  <div id="stale"></div>
   <div id="fab"><input id="qm" type="text" placeholder="Поиск по названию или адресу"><button id="openSheet">Фильтры<small id="visM"></small></button></div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
 <script>
 const D = __DATA__;
 const PAL = ['#7000FF','#E0533A','#1B9E77','#2F6DE1','#D98B00','#C2185B','#0097A7','#6D4C41','#5C6BC0','#8BC34A','#F06292','#455A64','#AF7AC5','#F4A261','#2A9D8F','#E76F51'];
@@ -115,7 +118,7 @@ const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:
 const sat=L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]);
 osm.addTo(map); L.control.layers({'Карта':osm,'Спутник':sat},null,{position:'topright'}).addTo(map);
 const useCluster=D.points.length>D.clusterFrom;
-const layer=useCluster?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:45,disableClusteringAtZoom:15}):L.layerGroup();
+const layer=useCluster?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:45,spiderfyOnMaxZoom:true,spiderfyDistanceMultiplier:1.6,showCoverageOnHover:false}):L.layerGroup();
 map.addLayer(layer);
 // categories: D.cats = [{name, values:[...]}]; each point p.c = [idxPerCat...]
 const colorCat=0; // first category colours the markers
@@ -145,7 +148,7 @@ const items=D.points.map((p,i)=>{
 });
 function apply(){
   const qq=q.trim().toLowerCase(); const keep=[]; list.innerHTML='';
-  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
+  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')+' '+D.cats.map((c,k)=>c.values[p.c[k]]).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
   layer.clearLayers(); if(useCluster) layer.addLayers(keep); else keep.forEach(m=>layer.addLayer(m));
   document.getElementById('vis').textContent=keep.length; document.getElementById('visM').textContent=document.getElementById('visS').textContent=keep.length.toLocaleString('ru');
 }
@@ -172,6 +175,7 @@ let sy=null; side.addEventListener('touchstart',e=>{sy=side.scrollTop===0?e.touc
 side.addEventListener('touchmove',e=>{if(sy!==null&&e.touches[0].clientY-sy>70){side.classList.remove('open');sy=null;}},{passive:true});
 document.getElementById('tot').textContent=D.points.length;
 if(!D.showList) document.getElementById('listCard').style.display='none';
+if(D.staleDays){const lm=new Date(document.lastModified);const age=(Date.now()-lm)/864e5;if(lm.getTime()&&age>D.staleDays){const el=document.getElementById('stale');el.textContent='Данные не обновлялись с '+lm.toLocaleDateString('ru-RU')+' (ожидается обновление каждый день)';el.style.display='block';}}
 apply();
 if(D.points.length){ map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15),{maxZoom:16}); } else { map.setView([41.31,69.28],11); }
 </script>
