@@ -27,6 +27,28 @@ FIELDS = ["Размер", "Оффер", "Дата начала контракт�
 # заголовки листа -> наши названия (в листе есть опечатки и лишние пробелы)
 ALIASES = {"Дата Смены Имиджа": "Дата смены имиджа", "Дата осмора фото": "Дата осмотра фото"}
 UZ_LAT, UZ_LON = (36.5, 46.0), (55.5, 74.0)
+# центры городов для проверки ГЕО (точка дальше CITY_RADIUS_KM от своего города не публикуется)
+CITY_RADIUS_KM = 30
+CITIES = {"ташкент": (41.311, 69.280), "бектемир": (41.21, 69.33), "андижан": (40.783, 72.344), "наманган": (41.000, 71.672), "фергана": (40.386, 71.786),
+          "маргилан": (40.471, 71.725), "коканд": (40.529, 70.943), "самарканд": (39.655, 66.959), "каттакурган": (39.899, 66.256), "бухара": (39.768, 64.421),
+          "каган": (39.722, 64.551), "гиждуван": (40.100, 64.683), "карши": (38.861, 65.789), "шахрисабз": (39.058, 66.834), "термез": (37.224, 67.278),
+          "денау": (38.267, 67.897), "нукус": (42.461, 59.617), "ургенч": (41.550, 60.631), "хива": (41.378, 60.364), "навои": (40.103, 65.374),
+          "зарафшан": (41.573, 64.207), "джизак": (40.116, 67.842), "гулистан": (40.489, 68.784), "ангрен": (41.016, 70.143), "чирчик": (41.469, 69.582),
+          "алмалык": (40.844, 69.598), "янгиюль": (41.112, 69.047), "нурафшон": (41.040, 69.360), "учкудук": (42.157, 63.556), "турткуль": (41.550, 61.000)}
+NOT_SET = "Не указан"
+
+
+def km(a, b, c, d):
+    import math
+    p = math.pi / 180
+    h = math.sin((c - a) * p / 2) ** 2 + math.cos(a * p) * math.cos(c * p) * math.sin((d - b) * p / 2) ** 2
+    return 12742 * math.asin(math.sqrt(h))
+
+
+def city_ok(city, lat, lon):
+    """None, если город неизвестен; иначе расстояние до центра города в км."""
+    c = CITIES.get(re.sub(r"\s+", " ", city.lower()).strip())
+    return None if not c else km(lat, lon, c[0], c[1])
 
 
 def norm_header(h):
@@ -155,7 +177,7 @@ def metro_points(values, size_values, base, stations, unmapped):
                 "id": hashlib.md5(f"metro|{sid}|{short}".encode()).hexdigest()[:8],
                 "name": f"{typ} ×{n}", "address": f"Ташкент, станция метро {st['name']} ({st['line']} линия)",
                 "lat": st["lat"], "lon": st["lon"],
-                "cat": {"Тип носителя": typ, "Город": "Ташкент", "Статус по износу": base.get("Статус по износу", "").strip() or "—", "Контрагент": base.get("Контрагент", "").strip() or "—"},
+                "cat": {"Тип носителя": typ, "Город": "Ташкент", "Статус по износу": base.get("Статус по износу", "").strip() or NOT_SET, "Контрагент": base.get("Контрагент", "").strip() or NOT_SET},
                 "props": props, "accuracy": "exact", "photo": "",
             })
     return pts
@@ -213,6 +235,11 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
         acc = "exact"
         if geo and not in_uz(*geo):
             bad_geo.append((i, r.get("ГЕО", ""))); geo = None
+        if geo:
+            dist = city_ok(city, *geo)
+            if dist is not None and dist > CITY_RADIUS_KM:
+                unmapped.append({"строка": i, "Город": city, "Тип носителя": kind, "Размер": r.get("Размер", ""), "Локация": loc, "ГЕО": r.get("ГЕО", ""), "причина": f"ГЕО не в городе: {dist:.0f} км от {city}, проверить координаты в реестре"})
+                continue
         if not geo:
             c = cache.get(key_of(city, loc))
             if c and c.get("lat"):
@@ -228,19 +255,34 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
             "id": hashlib.md5(f"{city}|{loc}|{kind}|{r.get('Размер','')}|{i}".encode()).hexdigest()[:8],
             "name": name, "address": ", ".join(x for x in (city, loc) if x),
             "lat": round(geo[0], 6), "lon": round(geo[1], 6),
-            "cat": {c: (r.get(c, "").strip() or "—") for c in CATS},
+            "cat": {c: (r.get(c, "").strip() or NOT_SET) for c in CATS},
             "props": props, "accuracy": acc, "photo": "",
         })
     n_metro = 0
     if metro_vals:
         mp = metro_points(metro_vals, sizes_vals or [], metro_base or {}, stations, unmapped)
         n_metro = len(mp); pts.extend(mp)
+    # одинаковые координаты у разных адресов (кроме метро и сторон А/Б одного места): пометить «проверить»
+    def addr_key(a):
+        a = re.sub(r"\(.*?\)", "", a.lower()); a = re.sub(r"\b(еще|ещё|сторона|а|б|a|b)\b", "", a)
+        return re.sub(r"[^a-zа-яё0-9]+", "", a)
+    groups = {}
+    for p in pts:
+        if p["cat"]["Тип носителя"].startswith("Метро") or p["accuracy"] != "exact":
+            continue  # метро и наши приблизительные геокоды не считаем
+        groups.setdefault((round(p["lat"], 5), round(p["lon"], 5)), []).append(p)
+    dups = 0
+    for g in groups.values():
+        if len({addr_key(p["address"]) for p in g}) > 1:
+            for p in g:
+                p["accuracy"] = "dup"; dups += 1
     today = datetime.date.today().isoformat()
     d = {
         "title": "Реестр статики", "subtitle": f"{len(pts)} носителей из {len(rows)} строк реестра, {len({p['cat']['Город'] for p in pts})} городов",
         "foot": f"Источник: Google-таблица «Реестр Статики», лист «{SHEET_NAME}». Обновляется автоматически каждый день в 12:00. Обновлено {today}. Без координат: {len(unmapped)} строк.",
         "categories": CATS, "fields": FIELDS, "numbered": False, "cluster_from": 60,
-        "accuracy_labels": {"exact": "координаты из реестра", "approx": "найдено по адресу, приблизительно", "building": "найдено по адресу"},
+        "accuracy_labels": {"exact": "координаты из реестра", "approx": "найдено по адресу, приблизительно", "building": "найдено по адресу", "dup": "координаты совпадают с другой строкой реестра, проверить"},
+        "stale_days": 2, "updated": today,
         "points": pts,
     }
     json.dump(d, open(os.path.join(slug, "data.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -258,7 +300,7 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
         json.dump(reg, open("maps.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     except (OSError, ValueError, KeyError):
         pass
-    print(f"{slug}: {len(pts)} точек из {len(rows)} строк (метро: {n_metro}); без координат {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
+    print(f"{slug}: {len(pts)} точек из {len(rows)} строк (метро: {n_metro}, дублей координат: {dups}); не на карте {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
 
 
 def main():
