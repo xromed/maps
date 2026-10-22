@@ -189,7 +189,7 @@ h1{margin:0 0 4px;font-size:26px;letter-spacing:-.01em}
 </style></head>
 <body><div class="wrap">
 <div class="hero"><h1>__TITLE__</h1><p>__SUB__</p>
-<div class="stats"><div><b id="nMaps">0</b>карт</div><div><b id="nPts">0</b>точек</div></div>
+<div class="stats"><div><b id="nMaps">0</b><span id="lMaps">карт</span></div><div><b id="nPts">0</b><span id="lPts">точек</span></div></div>
 <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Поиск по картам: название, описание, тег" autocomplete="off"></label></div>
 <div class="tags" id="tags"></div>
 <div class="g" id="grid"></div>
@@ -207,7 +207,9 @@ const allTags=[];D.items.forEach(i=>(i.tags||[]).forEach(t=>{if(!allTags.include
 let tag='';
 if(allTags.length){tagsEl.innerHTML=['<button class="tag on" data-t="">Все</button>'].concat(allTags.map(t=>`<button class="tag" data-t="${esc(t)}">${esc(t)}</button>`)).join('');
  tagsEl.addEventListener('click',e=>{const b=e.target.closest('.tag');if(!b)return;tag=b.dataset.t;tagsEl.querySelectorAll('.tag').forEach(x=>x.classList.toggle('on',x===b));render()});}
-document.getElementById('nMaps').textContent=D.items.length;document.getElementById('nPts').textContent=D.items.reduce((s,i)=>s+i.n,0);
+const nM=D.items.length,nP=D.items.reduce((s,i)=>s+i.n,0);
+document.getElementById('nMaps').textContent=nM;document.getElementById('lMaps').textContent=plural(nM,'карта','карты','карт');
+document.getElementById('nPts').textContent=nP;document.getElementById('lPts').textContent=plural(nP,'точка','точки','точек');
 function card(i){
  const chips=(i.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join('');
  return `<a class="m" href="${esc(i.slug)}/" data-slug="${esc(i.slug)}"><div class="mini" id="mini-${esc(i.slug)}"><span class="cnt">${i.n} ${plural(i.n,'точка','точки','точек')}</span></div>
