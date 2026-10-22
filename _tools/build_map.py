@@ -84,6 +84,7 @@ def compact(d):
         "numbered": bool(d.get("numbered", len(pts) <= 60)),
         "showList": bool(d.get("show_list", len(pts) <= 300)),
         "clusterFrom": int(d.get("cluster_from", 60)),
+        "staleDays": int(d.get("stale_days", 0)),  # >0: показать плашку, если страница старше N дней (для автообновляемых карт)
         "accLabels": d.get("accuracy_labels", {"exact": "адрес подтверждён по OSM", "approx": "координата приблизительная"}),
     }
 
@@ -152,7 +153,7 @@ def build_index(root="."):
 <title>__TITLE__</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <style>
 :root{--uz:#7000FF;--uz2:#5A00CC;--bg:#F4F4F8;--ink:#1B1B1F;--soft:#6E6E80;--line:#E6E6EE;--card:#fff}
 *{box-sizing:border-box}
@@ -197,7 +198,7 @@ h1{margin:0 0 4px;font-size:26px;letter-spacing:-.01em}
 <div class="empty" id="empty">Ничего не найдено</div>
 <div class="foot">Карты на <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>. Данные каждой карты доступны в GeoJSON и CSV на её странице.</div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <script>
 const D=__DATA__;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
