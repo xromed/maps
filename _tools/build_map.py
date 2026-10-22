@@ -25,7 +25,34 @@
   ]
 }
 """
-import csv, json, os, sys, html
+import csv, json, os, sys, html, base64, hashlib, re
+
+CDN = "https://unpkg.com"
+
+
+def safe_json(obj):
+    """JSON для вставки внутрь <script>: экранируем < > & и разделители строк U+2028/2029,
+    чтобы строка вида </script> из данных не могла разорвать скрипт (stored XSS)."""
+    s = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    return (s.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+             .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+
+
+def csp_for(page, extra_img=""):
+    """Content-Security-Policy для страницы: инлайн-скрипты разрешены только по sha256-хэшу,
+    внешние скрипты и стили только с CDN (с SRI в разметке), картинки: тайлы OSM/Esri и фото по https."""
+    hashes = []
+    for m in re.finditer(r"<script>(.*?)</script>", page, re.S):
+        hashes.append("'sha256-" + base64.b64encode(hashlib.sha256(m.group(1).encode("utf-8")).digest()).decode() + "'")
+    policy = (f"default-src 'none'; script-src {' '.join(hashes)} {CDN}; style-src 'self' 'unsafe-inline' {CDN} https://fonts.googleapis.com; "
+              f"font-src https://fonts.gstatic.com; img-src 'self' data: https: {extra_img}; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'")
+    return f'<meta http-equiv="Content-Security-Policy" content="{policy.strip()}">'
+
+
+def csv_safe(v):
+    """Ячейка, начинающаяся с = + - @ или управляющего символа, получает апостроф: Excel/Sheets не исполнит её как формулу."""
+    s = "" if v is None else str(v)
+    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 V = os.path.join(HERE, "vendor")
@@ -98,8 +125,10 @@ def build(slug):
     tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     page = (tpl.replace("__TITLE__", html.escape(d["title"]))
             .replace("__SUBTITLE__", html.escape(d.get("subtitle", "")))
-            .replace("__FOOT__", d.get("foot", ""))
-            .replace("__DATA__", json.dumps(compact(d), ensure_ascii=False, separators=(",", ":"))))
+            .replace("__FOOT__", d.get("foot", ""))  # foot: доверенный HTML из data.json (не из внешних таблиц)
+            .replace("__DATA__", safe_json(compact(d))))
+    assert page.count("<script>") == 1 and page.count("</script>") == 3, "сломана граница <script> в шаблоне"
+    page = page.replace("__CSP__", csp_for(page))
     with open(os.path.join(slug, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
     # exports
@@ -112,7 +141,7 @@ def build(slug):
         props.update({f: p.get("props", {}).get(f, "") for f in fields})
         props.update({"photo": p.get("photo", ""), "accuracy": p.get("accuracy", "")})
         feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [float(p["lon"]), float(p["lat"])]}, "properties": props})
-        rows.append({**props, "lat": p["lat"], "lon": p["lon"]})
+        rows.append({**{k: csv_safe(v) for k, v in props.items()}, "lat": p["lat"], "lon": p["lon"]})
     with open(os.path.join(slug, "data.geojson"), "w", encoding="utf-8") as f:
         json.dump({"type": "FeatureCollection", "features": feats}, f, ensure_ascii=False, indent=1)
     with open(os.path.join(slug, "data.csv"), "w", encoding="utf-8-sig", newline="") as f:
@@ -146,12 +175,13 @@ def build_index(root="."):
     for it in items:
         for t in it["tags"]:
             if t not in tags: tags.append(t)
-    data = json.dumps({"items": items}, ensure_ascii=False, separators=(",", ":"))
+    data = safe_json({"items": items})
     title, sub = html.escape(reg.get("title", "Карты")), html.escape(reg.get("subtitle", ""))
     total = sum(i["n"] for i in items)
     page = """<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__TITLE__</title>
 <meta name="robots" content="noindex, nofollow">
+__CSP__
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <style>
@@ -230,6 +260,7 @@ function render(){
 q.addEventListener('input',render);render();
 </script></body></html>"""
     page = page.replace("__TITLE__", title).replace("__SUB__", sub).replace("__DATA__", data)
+    page = page.replace("__CSP__", csp_for(page))
     with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
     print(f"OK: index.html, {len(items)} карт, {total} точек, теги: {', '.join(tags) or 'нет'}")
