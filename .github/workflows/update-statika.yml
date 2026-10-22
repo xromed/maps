@@ -2,6 +2,7 @@ name: update-statika
 # Ежедневно в 12:00 по Ташкенту (UTC+5 = 07:00 UTC) читает Google-таблицу «Реестр Статики»
 # через сервисный аккаунт (секрет GOOGLE_SA_JSON) и пересобирает карту statika/ в ветке gh-pages.
 # Файл лежит в main, потому что расписание GitHub работает только из ветки по умолчанию; сами скрипты и данные в gh-pages.
+# При сбое шлёт сообщение в Telegram, если заданы секреты TG_BOT_TOKEN и TG_CHAT_ID.
 on:
   schedule:
     - cron: "0 7 * * *"
@@ -24,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install google-auth requests
+      - run: pip install google-auth==2.40.3 requests==2.32.4
       - name: Read sheet and rebuild
         env:
           GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
@@ -42,3 +43,12 @@ jobs:
           git commit -m "statika: update $(date -u +%F)"
           git pull --rebase origin gh-pages
           git push origin gh-pages
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          if [ -z "$TG_BOT_TOKEN" ] || [ -z "$TG_CHAT_ID" ]; then echo "Секреты TG_BOT_TOKEN/TG_CHAT_ID не заданы, уведомление пропущено"; exit 0; fi
+          TEXT="⚠️ Карта «Реестр статики» не обновилась ($(date -u +%F)). Лог: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" --data-urlencode "chat_id=${TG_CHAT_ID}" --data-urlencode "text=${TEXT}" >/dev/null
