@@ -1,0 +1,121 @@
+{
+ "джизак|остановочном пункте в г. джиззак, ул. калия, микрорайон 3/2": {
+  "lat": 40.106012,
+  "lon": 67.853777,
+  "accuracy": "approx",
+  "source": "nominatim highway/secondary",
+  "checked": "2026-10-22"
+ },
+ "джизак|остановочном пункте в г. джиззак, ул. калия, микорайон 3/2 центр": {
+  "lat": 40.106012,
+  "lon": 67.853777,
+  "accuracy": "approx",
+  "source": "nominatim highway/secondary",
+  "checked": "2026-10-22"
+ },
+ "джизак|остановочном пункте в г. джиззак, ул. мустакилли, областная товаро-сыравая биржа": {
+  "lat": 40.171918,
+  "lon": 67.847359,
+  "accuracy": "approx",
+  "source": "nominatim highway/residential",
+  "checked": "2026-10-22"
+ },
+ "джизак|остановочном пункте в г. джиззак, ул. и. каримов, жами нижонлик": {
+  "lat": 40.108192,
+  "lon": 67.857809,
+  "accuracy": "approx",
+  "source": "nominatim highway/living_street",
+  "checked": "2026-10-22"
+ },
+ "джизак|остановочном пункте в г. джиззак, ул. и. каримов, йошлар маркази": {
+  "lat": 40.133066,
+  "lon": 67.831941,
+  "accuracy": "building",
+  "source": "nominatim office/government",
+  "checked": "2026-10-22"
+ },
+ "джизак|остановочном пункте в г. джиззак, ул. ш. рашидов, стадион согдиана": {
+  "lat": 40.134482,
+  "lon": 67.824267,
+  "accuracy": "approx",
+  "source": "nominatim highway/primary",
+  "checked": "2026-10-22"
+ },
+ "ташкент|tashkent city mall (лайтбокс в переходе, led экран в атриуме)": {
+  "lat": 41.316264,
+  "lon": 69.252413,
+  "accuracy": "building",
+  "source": "nominatim shop/mall",
+  "checked": "2026-10-22"
+ },
+ "ташкент|riviera (лайтбоксы, парапеды над экскалаторами)": {
+  "lat": 41.339874,
+  "lon": 69.254212,
+  "accuracy": "building",
+  "source": "nominatim shop/mall",
+  "checked": "2026-10-22"
+ },
+ "ташкент|eko bazar чимган (банер и брэндмауэры на фасаде)": {
+  "lat": 41.353337,
+  "lon": 69.351118,
+  "accuracy": "building",
+  "source": "nominatim shop/mall",
+  "checked": "2026-10-22"
+ },
+ "самарканд|ул. корасув массив ориентир: корзинка": {
+  "lat": 39.726292,
+  "lon": 66.916017,
+  "accuracy": "approx",
+  "source": "nominatim place/village",
+  "checked": "2026-10-22"
+ },
+ "ташкент|улица самарканд дарвоза,в сторону актепе": {
+  "lat": 41.318721,
+  "lon": 69.232389,
+  "accuracy": "approx",
+  "source": "nominatim highway/primary",
+  "checked": "2026-10-22"
+ },
+ "джизак|джизак, улица богишамол, темирйол переезд": {
+  "lat": 40.122893,
+  "lon": 67.818676,
+  "accuracy": "approx",
+  "source": "nominatim highway/residential",
+  "checked": "2026-10-22"
+ },
+ "джизак|джизак, ул. мустакиллик ориентир: ииб. куп каватли": {
+  "lat": 40.171918,
+  "lon": 67.847359,
+  "accuracy": "approx",
+  "source": "nominatim highway/residential",
+  "checked": "2026-10-22"
+ },
+ "ташкент|ткад, дорога в сторону рынка «урикзор»,": {
+  "lat": 41.286021,
+  "lon": 69.149563,
+  "accuracy": "building",
+  "source": "nominatim highway/bus_stop",
+  "checked": "2026-10-22"
+ },
+ "ташкент|ул. а. даниша, напротив жк «mavsum»": {
+  "lat": 41.379409,
+  "lon": 69.296466,
+  "accuracy": "approx",
+  "source": "nominatim highway/primary",
+  "checked": "2026-10-22"
+ },
+ "ташкент|жк «мирабад авеню», поврот на рынок «мирабад»": {
+  "lat": 41.291868,
+  "lon": 69.270782,
+  "accuracy": "approx",
+  "source": "nominatim landuse/residential",
+  "checked": "2026-10-22"
+ },
+ "навои|ул. жанубий": {
+  "lat": 40.086427,
+  "lon": 65.377844,
+  "accuracy": "approx",
+  "source": "nominatim highway/secondary",
+  "checked": "2026-10-22"
+ }
+}
