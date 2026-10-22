@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#7000FF">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+  :root{--uz:#7000FF;--uz2:#5A00CC;--uz-soft:#F1E9FF;--bg:#F4F4F8;--card:#FFFFFF;--ink:#1B1B1F;--soft:#6E6E80;--line:#E6E6EE;--warn:#B26A00;--ok:#2E7D4F;--r:16px}
+  *{box-sizing:border-box} html,body{height:100%;margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  #app{display:grid;grid-template-columns:340px 1fr;height:100dvh}
+  #side{background:var(--bg);border-right:1px solid var(--line);overflow-y:auto;padding:14px;font-size:13px;display:flex;flex-direction:column;gap:12px}
+  #map{height:100dvh}
+  .hero{background:linear-gradient(135deg,var(--uz) 0%,var(--uz2) 100%);color:#fff;border-radius:var(--r);padding:16px 18px}
+  .hero h1{font-size:20px;margin:0 0 3px;font-weight:700;letter-spacing:-.01em} .hero .sub{opacity:.85;font-size:12px}
+  .card{background:var(--card);border-radius:var(--r);padding:12px 14px;box-shadow:0 1px 2px rgba(27,27,31,.04)}
+  input[type=text]{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:13.5px;background:#fff;outline:none;font-family:inherit}
+  input[type=text]:focus{border-color:var(--uz);box-shadow:0 0 0 3px var(--uz-soft)}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:0 0 8px;display:flex;justify-content:space-between;font-weight:600}
+  h2 a{font-weight:500;text-transform:none;letter-spacing:0;color:var(--uz);cursor:pointer;font-size:11.5px}
+  label.row{display:flex;align-items:center;gap:7px;padding:4px 0;cursor:pointer}
+  label.row input{appearance:none;width:16px;height:16px;border:1.5px solid #C9C9D6;border-radius:5px;margin:0;flex:none;position:relative;background:#fff}
+  label.row input:checked{background:var(--uz);border-color:var(--uz)}
+  label.row input:checked::after{content:"";position:absolute;left:4.5px;top:1.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .sw{width:10px;height:10px;border-radius:50%;flex:none} .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .cnt{color:var(--soft);font-variant-numeric:tabular-nums;font-size:12px}
+  .stat{display:flex;align-items:baseline;gap:8px} .stat b{font-size:26px;font-weight:700;color:var(--uz)} .stat small{font-size:12px;color:var(--soft)}
+  .list{max-height:38vh;overflow:auto;margin:0 -4px;padding:0 4px}
+  .item{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:7px 6px;border-radius:10px;cursor:pointer}
+  .item:hover{background:var(--uz-soft)} .item.active{background:var(--uz-soft)}
+  .item .num{width:22px;height:22px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
+  .item .t{font-weight:500;line-height:1.3} .item .s{color:var(--soft);font-size:11.5px;margin-top:1px}
+  #filters{display:flex;flex-direction:column;gap:12px}
+  .foot{font-size:10.5px;color:var(--soft);line-height:1.5;padding:0 4px}
+  .foot a{color:var(--uz);text-decoration:none}
+  .dl{display:flex;gap:8px;flex-wrap:wrap} .dl a{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;color:var(--uz);text-decoration:none;font-weight:600;font-size:12px;background:#fff}
+  .dl a:hover{border-color:var(--uz)}
+  .leaflet-popup-content-wrapper{border-radius:14px;box-shadow:0 8px 24px rgba(27,27,31,.16);padding:0;overflow:hidden} .leaflet-popup-content{font-size:12.5px;line-height:1.5;margin:0;width:300px!important;max-width:calc(100vw - 70px)}
+  .pp img{display:block;width:100%;height:auto;max-height:260px;object-fit:cover;background:#eee}
+  .pp .b{padding:12px 14px 14px}
+  .pp b.nm{font-size:13.5px;display:block;margin-bottom:4px}
+  .tag{display:inline-flex;align-items:center;gap:5px;background:var(--uz-soft);color:var(--uz);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;margin:2px 4px 4px 0}
+  .tag .sw{width:7px;height:7px}
+  .pp dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0;font-size:12px}
+  .pp dt{color:var(--soft)} .pp dd{margin:0;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+  .pp .acc{display:inline-block;margin-top:8px;font-size:10.5px;padding:1px 8px;border-radius:999px;background:var(--bg);color:var(--soft)}
+  .pp .acc.exact{color:var(--ok)} .pp .acc.approx{color:var(--warn)}
+  .pp .lnk{margin-top:8px;font-size:11.5px;color:var(--soft)} .pp .lnk a{color:var(--uz);text-decoration:none}
+  .leaflet-bar a{color:var(--ink)} .leaflet-control-zoom{border:none!important;box-shadow:0 2px 8px rgba(27,27,31,.12)!important;border-radius:12px!important;overflow:hidden}
+  .leaflet-control-layers{border:none!important;border-radius:12px!important;box-shadow:0 2px 8px rgba(27,27,31,.12)!important;font-family:inherit;font-size:12px}
+  .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(112,0,255,.18)}
+  .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--uz);color:#fff;font-weight:600;font-family:inherit}
+  .pin{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;font:600 11px/1 Inter,sans-serif}
+  #fab,#sheetHead,#closeSheet,#showBtn{display:none}
+  @media (max-width:760px){
+    #app{display:block;position:relative;height:100dvh;overflow:hidden}
+    #map{position:absolute;inset:0;height:100%;width:100%}
+    #side{position:absolute;left:0;right:0;bottom:0;top:auto;height:auto;max-height:80dvh;border-right:none;border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(27,27,31,.18);padding:0 14px calc(14px + env(safe-area-inset-bottom));font-size:15px;transform:translateY(100%);transition:transform .25s ease;z-index:1100;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    #side.open{transform:none}
+    .hero,.foot{display:none}
+    #sheetHead{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);padding:14px 0 10px;z-index:2}
+    #sheetHead:before{content:"";position:absolute;top:6px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:#C9C9D6}
+    #sheetHead b{font-size:17px;margin-top:6px}
+    #closeSheet{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:50%;background:#fff;font-size:22px;color:var(--soft);margin-top:6px}
+    #fab{display:flex;position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:900;gap:8px}
+    #fab input[type=text]{flex:1;padding:14px 16px;font-size:16px;border-radius:14px;box-shadow:0 4px 16px rgba(27,27,31,.18);border-color:#fff}
+    #fab button{border:none;background:var(--uz);color:#fff;font:inherit;font-weight:600;font-size:15px;padding:0 18px;border-radius:14px;box-shadow:0 4px 16px rgba(112,0,255,.35);white-space:nowrap}
+    #fab button small{font-weight:500;opacity:.85;margin-left:6px}
+    #q{display:none}
+    #showBtn{display:block;position:sticky;bottom:0;width:100%;border:none;background:var(--uz);color:#fff;font:inherit;font-weight:600;font-size:16px;padding:15px;border-radius:14px;box-shadow:0 4px 16px rgba(112,0,255,.35)}
+    label.row{padding:9px 0;min-height:44px} label.row input{width:22px;height:22px;border-radius:7px}
+    label.row input:checked::after{left:7px;top:3px;width:5px;height:11px}
+    h2{font-size:12px} h2 a{font-size:14px;padding:6px 8px;margin:-6px 0} .cnt{font-size:13px}
+    .card{padding:10px 14px} .stat b{font-size:22px} .list{max-height:30vh}
+    .leaflet-popup-content{font-size:14px} .leaflet-popup-content-wrapper{max-width:calc(100vw - 60px)}
+    .leaflet-control-zoom{display:none} .leaflet-top.leaflet-left{top:env(safe-area-inset-top)}
+    .leaflet-bottom.leaflet-right{bottom:calc(72px + env(safe-area-inset-bottom))}
+    .leaflet-control-attribution{font-size:9px}
+    .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div id="sheetHead"><b>Фильтры</b><button id="closeSheet" aria-label="Закрыть">✕</button></div>
+    <div class="hero"><h1>__TITLE__</h1><div class="sub">__SUBTITLE__</div></div>
+    <input id="q" type="text" placeholder="Поиск по названию или адресу">
+    <div id="filters"></div>
+    <div class="card stat"><b id="vis">0</b><small>точек показано из <span id="tot">0</span></small></div>
+    <div class="card" id="listCard"><h2>Точки</h2><div class="list" id="list"></div></div>
+    <div class="card"><h2>Скачать</h2><div class="dl"><a href="data.geojson" download>GeoJSON</a><a href="data.csv" download>CSV</a></div></div>
+    <button id="showBtn">Показать <span id="visS"></span></button>
+    <div class="foot">__FOOT__</div>
+  </aside>
+  <div id="map"></div>
+  <div id="fab"><input id="qm" type="text" placeholder="Поиск по названию или адресу"><button id="openSheet">Фильтры<small id="visM"></small></button></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const D = __DATA__;
+const PAL = ['#7000FF','#E0533A','#1B9E77','#2F6DE1','#D98B00','#C2185B','#0097A7','#6D4C41','#5C6BC0','#8BC34A','#F06292','#455A64','#AF7AC5','#F4A261','#2A9D8F','#E76F51'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mobile=matchMedia('(max-width:760px)').matches;
+const map=L.map('map',{preferCanvas:true,tap:false,zoomControl:!mobile});
+const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+const sat=L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]);
+osm.addTo(map); L.control.layers({'Карта':osm,'Спутник':sat},null,{position:'topright'}).addTo(map);
+const useCluster=D.points.length>D.clusterFrom;
+const layer=useCluster?L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:45,disableClusteringAtZoom:15}):L.layerGroup();
+map.addLayer(layer);
+// categories: D.cats = [{name, values:[...]}]; each point p.c = [idxPerCat...]
+const colorCat=0; // first category colours the markers
+const state=D.cats.map(c=>c.values.map(()=>true));
+let q='';
+function colorOf(p){ return D.cats.length?PAL[p.c[colorCat]%PAL.length]:PAL[0]; }
+function popup(p,i){
+  const tags=D.cats.map((c,k)=>`<span class="tag"><span class="sw" style="background:${PAL[p.c[k]%PAL.length]}"></span>${esc(c.values[p.c[k]])}</span>`).join('');
+  const rows=D.fields.map((f,k)=>p.v[k]!=null&&p.v[k]!==''?`<dt>${esc(f)}</dt><dd>${esc(p.v[k])}</dd>`:'').join('');
+  const acc=p.a?`<span class="acc ${p.a}">${esc(D.accLabels[p.a]||p.a)}</span>`:'';
+  const ph=p.ph?`<img src="${esc(p.ph)}" alt="" loading="lazy">`:'';
+  const osmU=`https://www.openstreetmap.org/?mlat=${p.y}&mlon=${p.x}#map=18/${p.y}/${p.x}`, gU=`https://www.google.com/maps?q=${p.y},${p.x}`;
+  return `<div class="pp">${ph}<div class="b"><b class="nm">${esc(p.n)}</b>${tags}${p.ad?`<div>${esc(p.ad)}</div>`:''}${rows?`<dl>${rows}</dl>`:''}${acc}<div class="lnk">${p.y.toFixed(5)}, ${p.x.toFixed(5)} · <a href="${osmU}" target="_blank" rel="noopener">OSM</a> · <a href="${gU}" target="_blank" rel="noopener">Google</a></div></div></div>`;
+}
+const markers=D.points.map((p,i)=>{
+  const col=colorOf(p); let m;
+  if(D.numbered){ m=L.marker([p.y,p.x],{icon:L.divIcon({className:'',html:`<div class="pin" style="background:${col}">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13],popupAnchor:[0,-13]})}); }
+  else { m=L.circleMarker([p.y,p.x],{radius:7,fillColor:col,color:'#fff',weight:1.2,fillOpacity:.95}); }
+  m.bindPopup(popup(p,i),{maxWidth:320}); m._i=i; return m;
+});
+const list=document.getElementById('list');
+const items=D.points.map((p,i)=>{
+  const el=document.createElement('div'); el.className='item'; el.innerHTML=`<div class="num" style="background:${colorOf(p)}">${i+1}</div><div><div class="t">${esc(p.n)}</div><div class="s">${esc(p.ad||'')}</div></div>`;
+  el.onclick=()=>{ document.getElementById('side').classList.remove('open'); const m=markers[i]; if(useCluster){layer.zoomToShowLayer(m,()=>m.openPopup());} else {map.flyTo([p.y,p.x],17,{duration:.6}); m.openPopup();} };
+  markers[i].on('popupopen',()=>{document.querySelectorAll('.item').forEach(x=>x.classList.remove('active')); el.classList.add('active'); el.scrollIntoView({block:'nearest'});});
+  return el;
+});
+function apply(){
+  const qq=q.trim().toLowerCase(); const keep=[]; list.innerHTML='';
+  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
+  layer.clearLayers(); if(useCluster) layer.addLayers(keep); else keep.forEach(m=>layer.addLayer(m));
+  document.getElementById('vis').textContent=keep.length; document.getElementById('visM').textContent=document.getElementById('visS').textContent=keep.length.toLocaleString('ru');
+}
+const fbox=document.getElementById('filters');
+D.cats.forEach((c,k)=>{
+  const counts=c.values.map(()=>0); D.points.forEach(p=>counts[p.c[k]]++);
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`<h2>${esc(c.name)} <span><a data-k="${k}" data-v="1">все</a> · <a data-k="${k}" data-v="0">ничего</a></span></h2><div class="rows"></div>`;
+  const rows=card.querySelector('.rows');
+  c.values.forEach((n,i)=>{ const l=document.createElement('label'); l.className='row';
+    l.innerHTML=`<input type="checkbox" checked><span class="sw" style="background:${k===colorCat?PAL[i%PAL.length]:'#C9C9D6'}"></span><span class="lbl" title="${esc(n)}">${esc(n)}</span><span class="cnt">${counts[i]}</span>`;
+    l.querySelector('input').addEventListener('change',e=>{state[k][i]=e.target.checked;apply();}); rows.appendChild(l); });
+  card.querySelectorAll('h2 a').forEach(a=>a.onclick=()=>{const v=a.dataset.v==='1'; state[k].fill(v); rows.querySelectorAll('input').forEach(x=>x.checked=v); apply();});
+  fbox.appendChild(card);
+});
+document.getElementById('q').addEventListener('input',e=>{q=e.target.value;document.getElementById('qm').value=q;apply();});
+document.getElementById('qm').addEventListener('input',e=>{q=e.target.value;document.getElementById('q').value=q;apply();});
+const side=document.getElementById('side');
+document.getElementById('openSheet').onclick=()=>side.classList.add('open');
+document.getElementById('closeSheet').onclick=document.getElementById('showBtn').onclick=()=>side.classList.remove('open');
+map.on('click',()=>side.classList.remove('open'));
+window.addEventListener('resize',()=>map.invalidateSize());
+let sy=null; side.addEventListener('touchstart',e=>{sy=side.scrollTop===0?e.touches[0].clientY:null},{passive:true});
+side.addEventListener('touchmove',e=>{if(sy!==null&&e.touches[0].clientY-sy>70){side.classList.remove('open');sy=null;}},{passive:true});
+document.getElementById('tot').textContent=D.points.length;
+if(!D.showList) document.getElementById('listCard').style.display='none';
+apply();
+if(D.points.length){ map.fitBounds(L.featureGroup(markers).getBounds().pad(0.15),{maxZoom:16}); } else { map.setView([41.31,69.28],11); }
+</script>
+</body>
+</html>
