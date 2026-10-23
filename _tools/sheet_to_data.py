@@ -25,7 +25,10 @@ RANGE = f"'{SHEET_NAME}'!A1:Z2000"
 CATS = ["Тип носителя", "Город", "Статус по износу", "Контрагент"]
 FIELDS = ["Размер", "Оффер", "Дата начала контракта", "Дата монтажа", "Дата смены имиджа", "Дата осмотра фото", "Комментарий"]
 # заголовки листа -> наши названия (в листе есть опечатки и лишние пробелы)
-ALIASES = {"Дата Смены Имиджа": "Дата смены имиджа", "Дата осмора фото": "Дата осмотра фото"}
+ALIASES = {"Дата Смены Имиджа": "Дата смены имиджа", "Дата осмора фото": "Дата осмотра фото", "Базар?": "Базар"}
+# переключатели на карте: флаг ставится, если в колонке field стоит «Да»
+TOGGLES = [{"key": "bazaar", "label": "Только базар", "field": "Базар", "badge": "На территории рынка"}]
+YES = ("да", "yes", "1", "+", "true")
 UZ_LAT, UZ_LON = (36.5, 46.0), (55.5, 74.0)
 # центры городов для проверки ГЕО (точка дальше CITY_RADIUS_KM от своего города не публикуется)
 CITY_RADIUS_KM = 30
@@ -257,6 +260,7 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
             "lat": round(geo[0], 6), "lon": round(geo[1], 6),
             "cat": {c: (r.get(c, "").strip() or NOT_SET) for c in CATS},
             "props": props, "accuracy": acc, "photo": "",
+            "flags": [t["key"] for t in TOGGLES if r.get(t["field"], "").strip().lower() in YES],
         })
     n_metro = 0
     if metro_vals:
@@ -283,6 +287,7 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
         "categories": CATS, "fields": FIELDS, "numbered": False, "cluster_from": 60,
         "accuracy_labels": {"exact": "координаты из реестра", "approx": "найдено по адресу, приблизительно", "building": "найдено по адресу", "dup": "координаты совпадают с другой строкой реестра, проверить"},
         "stale_days": 2, "updated": today,
+        "toggles": [{k: t[k] for k in ("key", "label", "field", "badge")} for t in TOGGLES],
         "points": pts,
     }
     json.dump(d, open(os.path.join(slug, "data.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -300,7 +305,8 @@ def build(slug, rows, metro_vals=None, sizes_vals=None):
         json.dump(reg, open("maps.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     except (OSError, ValueError, KeyError):
         pass
-    print(f"{slug}: {len(pts)} точек из {len(rows)} строк (метро: {n_metro}, дублей координат: {dups}); не на карте {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
+    n_flags = {t["key"]: sum(t["key"] in p.get("flags", []) for p in pts) for t in TOGGLES}
+    print(f"{slug}: {len(pts)} точек из {len(rows)} строк (метро: {n_metro}, дублей координат: {dups}, флаги: {n_flags}); не на карте {len(unmapped)} (из них можно геокодировать {len(need)}); ГЕО вне Узбекистана: {bad_geo or 'нет'}")
 
 
 def main():
