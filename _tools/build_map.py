@@ -15,12 +15,15 @@
   "numbered": true,                                 # нумерованные метки + список точек (для < ~60 точек); false = круглые маркеры + кластеры
   "cluster_from": 60,                               # кластеризовать, если точек больше
   "accuracy_labels": {"exact": "адрес подтверждён", "approx": "по схеме, ±30 м"},
+  "toggles": [{"key": "bazaar", "label": "Только базар", "field": "Базар", "badge": "На территории рынка"}],  # необязательно: переключатели «только с флагом»
+                                                    # field = название колонки в экспорте, badge = метка в карточке
   "points": [
     {"name": "CH-16766", "address": "Чиланзар-1, 11", "lat": 41.28652, "lon": 69.22918,
      "photo": "photos/16766.jpg",                     # относительный путь или URL, необязательно
      "cat": {"Район": "Чиланзарский", "Формат": "Большой"},
      "props": {"Размер": "1.3 × 12 м", "Площадь": "15.6 м²", "Выдан": "14.02.2025"},
      "accuracy": "exact",                              # exact | approx | "" (необязательно)
+     "flags": ["bazaar"],                              # ключи из toggles (необязательно)
      "id": "CH-16766"}                                 # необязательно, идёт в экспорт
   ]
 }
@@ -91,6 +94,7 @@ def validate(d):
 def compact(d):
     cats = d.get("categories", [])
     fields = d.get("fields", [])
+    toggles = d.get("toggles", [])
     values = {c: [] for c in cats}
     pts = []
     for p in d["points"]:
@@ -103,9 +107,11 @@ def compact(d):
         pts.append({
             "n": p["name"], "ad": p.get("address", ""), "y": round(float(p["lat"]), 6), "x": round(float(p["lon"]), 6),
             "c": idx, "v": [p.get("props", {}).get(f, "") for f in fields], "ph": p.get("photo", "") or "", "a": p.get("accuracy", "") or "",
+            "f": [k for k, t in enumerate(toggles) if t["key"] in (p.get("flags") or [])],
         })
     return {
         "cats": [{"name": c, "values": values[c]} for c in cats],
+        "toggles": [{"label": t.get("label", t["key"]), "badge": t.get("badge", "")} for t in toggles],
         "fields": fields,
         "points": pts,
         "numbered": bool(d.get("numbered", len(pts) <= 60)),
@@ -139,6 +145,7 @@ def build(slug):
         props = {"n": i, "id": p.get("id", ""), "name": p["name"], "address": p.get("address", "")}
         props.update({c: p.get("cat", {}).get(c, "") for c in cats})
         props.update({f: p.get("props", {}).get(f, "") for f in fields})
+        props.update({t.get("field", t["key"]): ("Да" if t["key"] in (p.get("flags") or []) else "") for t in d.get("toggles", [])})
         props.update({"photo": p.get("photo", ""), "accuracy": p.get("accuracy", "")})
         feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [float(p["lon"]), float(p["lat"])]}, "properties": props})
         rows.append({**{k: csv_safe(v) for k, v in props.items()}, "lat": p["lat"], "lon": p["lon"]})
