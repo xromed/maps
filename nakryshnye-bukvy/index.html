@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#7000FF">
 <title>Накрышные буквы</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EY1LTJjDBjllDreMieIS0TjRomM3Vo920YjE7V6xaD8=' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https: ; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-9/E048sA7fRT6Ut9RlCdJgC457m6UpBlM758Ue36m1U=' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https: ; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"><link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous">
@@ -58,6 +58,12 @@
   .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(112,0,255,.18)}
   .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--uz);color:#fff;font-weight:600;font-family:inherit}
   .pin{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;font:600 11px/1 Inter,sans-serif}
+  .tgl{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600}
+  .tgl .cnt{font-weight:400}
+  .tgl input{appearance:none;flex:none;width:36px;height:20px;border-radius:999px;background:#C9C9D6;position:relative;margin:0;cursor:pointer;transition:background .15s}
+  .tgl input::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+  .tgl input:checked{background:var(--uz)} .tgl input:checked::after{left:18px}
+  .tag.hl{background:#FFF1D6;color:#8A5A00}
   #fab,#sheetHead,#closeSheet,#showBtn{display:none}
   @media (max-width:760px){
     #app{display:block;position:relative;height:100dvh;overflow:hidden}
@@ -77,6 +83,7 @@
     #fab button small{font-weight:500;opacity:.85;margin-left:6px}
     #q{display:none}
     #showBtn{display:block;position:sticky;bottom:0;width:100%;border:none;background:var(--uz);color:#fff;font:inherit;font-weight:600;font-size:16px;padding:15px;border-radius:14px;box-shadow:0 4px 16px rgba(112,0,255,.35)}
+    .tgl{min-height:44px} .tgl input{width:44px;height:26px} .tgl input::after{width:22px;height:22px} .tgl input:checked::after{left:20px}
     label.row{padding:9px 0;min-height:44px} label.row input{width:22px;height:22px;border-radius:7px}
     label.row input:checked::after{left:7px;top:3px;width:5px;height:11px}
     h2{font-size:12px} h2 a{font-size:14px;padding:6px 8px;margin:-6px 0} .cnt{font-size:13px}
@@ -124,15 +131,17 @@ map.addLayer(layer);
 // categories: D.cats = [{name, values:[...]}]; each point p.c = [idxPerCat...]
 const colorCat=0; // first category colours the markers
 const state=D.cats.map(c=>c.values.map(()=>true));
+const TG=D.toggles||[]; const tstate=TG.map(()=>false);
 let q='';
 function colorOf(p){ return D.cats.length?PAL[p.c[colorCat]%PAL.length]:PAL[0]; }
 function popup(p,i){
   const tags=D.cats.map((c,k)=>`<span class="tag"><span class="sw" style="background:${PAL[p.c[k]%PAL.length]}"></span>${esc(c.values[p.c[k]])}</span>`).join('');
   const rows=D.fields.map((f,k)=>p.v[k]!=null&&p.v[k]!==''?`<dt>${esc(f)}</dt><dd>${esc(p.v[k])}</dd>`:'').join('');
+  const badges=(p.f||[]).map(t=>TG[t].badge?`<span class="tag hl">${esc(TG[t].badge)}</span>`:'').join('');
   const acc=p.a?`<span class="acc ${p.a}">${esc(D.accLabels[p.a]||p.a)}</span>`:'';
   const ph=p.ph?`<img src="${esc(p.ph)}" alt="" loading="lazy">`:'';
   const osmU=`https://www.openstreetmap.org/?mlat=${p.y}&mlon=${p.x}#map=18/${p.y}/${p.x}`, gU=`https://www.google.com/maps?q=${p.y},${p.x}`;
-  return `<div class="pp">${ph}<div class="b"><b class="nm">${esc(p.n)}</b>${tags}${p.ad?`<div>${esc(p.ad)}</div>`:''}${rows?`<dl>${rows}</dl>`:''}${acc}<div class="lnk">${p.y.toFixed(5)}, ${p.x.toFixed(5)} · <a href="${osmU}" target="_blank" rel="noopener">OSM</a> · <a href="${gU}" target="_blank" rel="noopener">Google</a></div></div></div>`;
+  return `<div class="pp">${ph}<div class="b"><b class="nm">${esc(p.n)}</b>${badges}${tags}${p.ad?`<div>${esc(p.ad)}</div>`:''}${rows?`<dl>${rows}</dl>`:''}${acc}<div class="lnk">${p.y.toFixed(5)}, ${p.x.toFixed(5)} · <a href="${osmU}" target="_blank" rel="noopener">OSM</a> · <a href="${gU}" target="_blank" rel="noopener">Google</a></div></div></div>`;
 }
 const markers=D.points.map((p,i)=>{
   const col=colorOf(p); let m;
@@ -149,11 +158,18 @@ const items=D.points.map((p,i)=>{
 });
 function apply(){
   const qq=q.trim().toLowerCase(); const keep=[]; list.innerHTML='';
-  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')+' '+D.cats.map((c,k)=>c.values[p.c[k]]).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
+  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&tstate.every((on,t)=>!on||p.f.includes(t))&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')+' '+D.cats.map((c,k)=>c.values[p.c[k]]).join(' ')+' '+p.f.map(t=>TG[t].badge+' '+TG[t].label).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
   layer.clearLayers(); if(useCluster) layer.addLayers(keep); else keep.forEach(m=>layer.addLayer(m));
   document.getElementById('vis').textContent=keep.length; document.getElementById('visM').textContent=document.getElementById('visS').textContent=keep.length.toLocaleString('ru');
 }
 const fbox=document.getElementById('filters');
+TG.forEach((t,k)=>{
+  const n=D.points.filter(p=>p.f.includes(k)).length;
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`<label class="tgl"><span class="lbl">${esc(t.label)}</span><span class="cnt">${n}</span><input type="checkbox" role="switch"></label>`;
+  card.querySelector('input').addEventListener('change',e=>{tstate[k]=e.target.checked;apply();});
+  fbox.appendChild(card);
+});
 D.cats.forEach((c,k)=>{
   const counts=c.values.map(()=>0); D.points.forEach(p=>counts[p.c[k]]++);
   const card=document.createElement('div'); card.className='card';
