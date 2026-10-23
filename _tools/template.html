@@ -58,6 +58,12 @@ __CSP__
   .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(112,0,255,.18)}
   .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--uz);color:#fff;font-weight:600;font-family:inherit}
   .pin{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;font:600 11px/1 Inter,sans-serif}
+  .tgl{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600}
+  .tgl .cnt{font-weight:400}
+  .tgl input{appearance:none;flex:none;width:36px;height:20px;border-radius:999px;background:#C9C9D6;position:relative;margin:0;cursor:pointer;transition:background .15s}
+  .tgl input::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+  .tgl input:checked{background:var(--uz)} .tgl input:checked::after{left:18px}
+  .tag.hl{background:#FFF1D6;color:#8A5A00}
   #fab,#sheetHead,#closeSheet,#showBtn{display:none}
   @media (max-width:760px){
     #app{display:block;position:relative;height:100dvh;overflow:hidden}
@@ -77,6 +83,7 @@ __CSP__
     #fab button small{font-weight:500;opacity:.85;margin-left:6px}
     #q{display:none}
     #showBtn{display:block;position:sticky;bottom:0;width:100%;border:none;background:var(--uz);color:#fff;font:inherit;font-weight:600;font-size:16px;padding:15px;border-radius:14px;box-shadow:0 4px 16px rgba(112,0,255,.35)}
+    .tgl{min-height:44px} .tgl input{width:44px;height:26px} .tgl input::after{width:22px;height:22px} .tgl input:checked::after{left:20px}
     label.row{padding:9px 0;min-height:44px} label.row input{width:22px;height:22px;border-radius:7px}
     label.row input:checked::after{left:7px;top:3px;width:5px;height:11px}
     h2{font-size:12px} h2 a{font-size:14px;padding:6px 8px;margin:-6px 0} .cnt{font-size:13px}
@@ -124,15 +131,17 @@ map.addLayer(layer);
 // categories: D.cats = [{name, values:[...]}]; each point p.c = [idxPerCat...]
 const colorCat=0; // first category colours the markers
 const state=D.cats.map(c=>c.values.map(()=>true));
+const TG=D.toggles||[]; const tstate=TG.map(()=>false);
 let q='';
 function colorOf(p){ return D.cats.length?PAL[p.c[colorCat]%PAL.length]:PAL[0]; }
 function popup(p,i){
   const tags=D.cats.map((c,k)=>`<span class="tag"><span class="sw" style="background:${PAL[p.c[k]%PAL.length]}"></span>${esc(c.values[p.c[k]])}</span>`).join('');
   const rows=D.fields.map((f,k)=>p.v[k]!=null&&p.v[k]!==''?`<dt>${esc(f)}</dt><dd>${esc(p.v[k])}</dd>`:'').join('');
+  const badges=(p.f||[]).map(t=>TG[t].badge?`<span class="tag hl">${esc(TG[t].badge)}</span>`:'').join('');
   const acc=p.a?`<span class="acc ${p.a}">${esc(D.accLabels[p.a]||p.a)}</span>`:'';
   const ph=p.ph?`<img src="${esc(p.ph)}" alt="" loading="lazy">`:'';
   const osmU=`https://www.openstreetmap.org/?mlat=${p.y}&mlon=${p.x}#map=18/${p.y}/${p.x}`, gU=`https://www.google.com/maps?q=${p.y},${p.x}`;
-  return `<div class="pp">${ph}<div class="b"><b class="nm">${esc(p.n)}</b>${tags}${p.ad?`<div>${esc(p.ad)}</div>`:''}${rows?`<dl>${rows}</dl>`:''}${acc}<div class="lnk">${p.y.toFixed(5)}, ${p.x.toFixed(5)} · <a href="${osmU}" target="_blank" rel="noopener">OSM</a> · <a href="${gU}" target="_blank" rel="noopener">Google</a></div></div></div>`;
+  return `<div class="pp">${ph}<div class="b"><b class="nm">${esc(p.n)}</b>${badges}${tags}${p.ad?`<div>${esc(p.ad)}</div>`:''}${rows?`<dl>${rows}</dl>`:''}${acc}<div class="lnk">${p.y.toFixed(5)}, ${p.x.toFixed(5)} · <a href="${osmU}" target="_blank" rel="noopener">OSM</a> · <a href="${gU}" target="_blank" rel="noopener">Google</a></div></div></div>`;
 }
 const markers=D.points.map((p,i)=>{
   const col=colorOf(p); let m;
@@ -149,11 +158,18 @@ const items=D.points.map((p,i)=>{
 });
 function apply(){
   const qq=q.trim().toLowerCase(); const keep=[]; list.innerHTML='';
-  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')+' '+D.cats.map((c,k)=>c.values[p.c[k]]).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
+  D.points.forEach((p,i)=>{ const ok=p.c.every((v,k)=>state[k][v])&&tstate.every((on,t)=>!on||p.f.includes(t))&&(!qq||((p.n||'')+' '+(p.ad||'')+' '+(p.v||[]).join(' ')+' '+D.cats.map((c,k)=>c.values[p.c[k]]).join(' ')+' '+p.f.map(t=>TG[t].badge+' '+TG[t].label).join(' ')).toLowerCase().includes(qq)); if(ok){keep.push(markers[i]); list.appendChild(items[i]);} });
   layer.clearLayers(); if(useCluster) layer.addLayers(keep); else keep.forEach(m=>layer.addLayer(m));
   document.getElementById('vis').textContent=keep.length; document.getElementById('visM').textContent=document.getElementById('visS').textContent=keep.length.toLocaleString('ru');
 }
 const fbox=document.getElementById('filters');
+TG.forEach((t,k)=>{
+  const n=D.points.filter(p=>p.f.includes(k)).length;
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`<label class="tgl"><span class="lbl">${esc(t.label)}</span><span class="cnt">${n}</span><input type="checkbox" role="switch"></label>`;
+  card.querySelector('input').addEventListener('change',e=>{tstate[k]=e.target.checked;apply();});
+  fbox.appendChild(card);
+});
 D.cats.forEach((c,k)=>{
   const counts=c.values.map(()=>0); D.points.forEach(p=>counts[p.c[k]]++);
   const card=document.createElement('div'); card.className='card';
